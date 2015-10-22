@@ -1,0 +1,12 @@
+a) GUI
+b) Kein Leerlaufen der Filter mehr, um Wartezeit (1-2 Minuten) zu vermeiden
+c) Anzeige der Restzeit bis zur Landung
+d) Erkennen des Sondentyps anhand des Dateinamens
+	Grund:
+		Manchmal beginnt eine DFM06-Datei mit 4 Zeilen wie RS92
+	Bisherige Typen:
+	- RS92 (ohne besondere Kennung)
+	- DFM06
+	- M10
+	Neue Typen:
+	- C34 (2 Beispieldateien von Andreas6_B)
