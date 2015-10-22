@@ -1,0 +1,245 @@
+Einfachste Berechnung: nur Platzpunkt
+
+Input:
+Bp	Predicted burst position
+Lp	Predicted landing position
+Ba	Actual burst position
+
+Output:
+La	Actual landing position
+
+Calculation:
+Bp2 = Vorhergesagte Position (fallend) bei tatsächlicher Platzhöhe
+	Falls tatsächliche Platzhöhe über vorhergesagte Platzhöhe:
+	statt tatsächliche Platzhöhe wird die nächste Höhe unter der vorhergesagte Platzhöhe verwendet
+La = Lp + (Ba - Bp2)
+
+
+-------------------------------------------------
+
+Name der LivePrediction-Datei:
+Wie Name der groundtrack-Datei, aber mit "LivePrediction_" beginnend (statt mit "groundtrack")
+
+Fehlerkorrektur:
+a) Fehlerhafte Positionen und Höhen ("Ausreißer") werden ignoriert
+	Kriterium: weniger als 150m vom Durchschnitt der letzten Messungen
+b) LivePrediction erst ab 120s nach dem Burst laut GroundTrack-Datei von SondeMonitor
+
+-------------------------------------------------
+6.2.2015
+http://20832.dynamicboard.de/t3511f14-Live-Prediction.html#msg3073872
+
+Bekanntlich ist der Weg das Ziel, und der ist bei der Sondenjagd gerne verschlungen.
+Da haben wir vorbereitend die Vorhersage von predict.habhub.org und unterwegs die lfd. Position von der Sonde, die Aim-Position von Sondemonitor und die Peilantenne. Die Vorhersage ist naturgemäß oftmals um einige km daneben, die lfd. Angaben von SM sind interpretationsbedürftig und mit etwas Pech ist am Ende kein Signal zum Anpeilen hörbar.
+
+Es gilt zum Zeitpunkt der Landung möglichst gut in der Nähe zu sein. Zur Optimierung dieses Vorhabens habe ich in den letzten Wochen ein Windows-Programm gebastelt, welches während der Jagd die Vorhersage von predict.habhub.org laufend verbessert: SondePredictor.exe
+Die Idee hierbei ist, Vorhersage und aktuelle Flugdaten miteinander zu verrechnen.
+
+Die nötigen Dateien stelle ich dort zum Download bereit:
+[URL]https://www.dropbox.com/sh/bo8pe5s6s7qj08l/AACI19_RYKwSLgBb88WCzABoa?dl=0[/URL]
+Die 7z-Datei enthält alles, was benötigt wird. Man kann auch die einzelnen Dateien downloaden, allerdings verhindert Chrome das Speichern mit der Begründung, dass sei schädlich.
+
+Anwendung:
+a) Von predict.habhub.org entweder output.csv oder flight_path.csv laden und ins SM-Data-Verzeichnis kopieren
+b) SondeMonitor starten und warten, bis der Groundtrack geschrieben wird, und zwar die Datei mit der SN im Namen.
+   Beispiel: groundtrack2015011812Z_J0213118.txt
+c) SondePredictor starten,
+   entweder direkt im SM-Data-Verzeichnis oder den Verzeichnisnamen als Startparameter angeben.
+   SondePredictor kann jederzeit später beendet/gestartet werden, muss also nicht durchgehend laufen.
+
+Z.Zt. ist SondePredictor ein Konsolenprogramm.
+Es benötigt zwei Dateien:
+a) Prediction-Datei output.csv oder flight_path.csv
+b) Groundtrack-Datei von SM
+Es erzeugt zweierlei Ausgaben:
+a) Die Konsole informiert über die momentane Tätigkeit von SondePredictor (eher uninteressant, wenn man es kennt)
+b) Alle Vorhersagen werden in eine Textdatei geschrieben, z.B. LivePrediction_2015011812Z_J0213118.txt (Dateiname ähnlich groundtrack)
+
+Jede Minute wird eine neue Zeile an die LivePrediction-Datei angehängt (sofern SM Positionen liefert).
+Beispiel:
+! 15716m, -19m/s = 185%!, landing in 20 minutes at lat/lon 53.4789 10.8542
+
+Bedeutungen:
+! = Fall, ^ = Aufstieg
+15716m = momentane Höhe
+-19m/s = momentane Vertikalgeschwindigkeit
+185% = Verhältnis von momentaner zu vorhergesagter (predict.habhub.org) Vertikalgeschwindigkeit
+185%! = Vertikalgeschwindigkeits-Verhältnis deutet auf Probleme mit dem Fallschirm hin => Zeitkorrektur
+20 minutes = Zeit, bis evtl. das Signal abreist
+53.4789 10.8542 = Landeposition als Latitude und Longitude
+
+Die Zeitkorrektur wird nur bei ungewöhnlich raschem Fall aktiviert (zusätzlich). Sie korrigiert Landeposition und -Zeit aufgrund des Vertikalgeschwindigkeits-Verhältnisses. Bei normaler Sinkgeschwindigkeit wird diese Korrektur nicht vorgenommen, weil sie das Ergebnis verschlechtern würde.
+Grund: Geschwindigkeiten sind instabiler als Positionen (Ableitung, Schwankungen werden zu Pegeln)
+
+Anmerkungen:
+a) Die Live-Prediction wird nur alle 60s berechnet, weil die Prediction nur alle 50s erfolgt (die leichte Überlappung von 10s ist gewollt).
+b) Version 1.0 zeigte unterwegs noch einige Handhabungsmängel, die nun abgestellt sind
+c) Aktuell ist die Version 1.1, welche anhand der Daten von 2 sehr unterschiedlichen Flügen entwickelt und getestet wurde. Der Feldtest steht noch aus.
+
+So, das ist es in Kürze. Anregungen und Kommentare sind natürlich willkommen.
+Ein paar Ideen zur Weiterentwicklung sind schon in der sprichwörtlichen Schublade. Die verrate ich aber noch nicht, um der Diskussion (sofern eine erfolgt) nicht vorzugreifen.
+
+-------------------------------------------------
+7.2.2015
+http://20832.dynamicboard.de/t3511f14-Live-Prediction.html#msg3073872
+
+Im o.g. Dropbox-Verzeichnis liegt nun noch eine Demo, bestehend aus Eingangsdateien und Ergebnissen. Hier kann man die laufenden Live-Vorhersagen (zu jeder Höhe) mit der letzten Position aus output.csv (53.1992,9.24739) verleichen.
+Besonderheit dieses Fluges: Die Sonde stieg höher, als vorhergesagt.
+
+Gestern hatte ich nicht erwähnt, dass SondePredictor auch eine GPX-Datei schreibt. Diese wird leider nicht mit </gpx> abgeschlossen, das muss man also ggf. manuell ergänzen. Als Windows- statt Konsolen-Applikation sollte das automatisch gehen. Ein Grund mehr, eine GUI zu bauen.
+Jeder Wegpunkt in der GPX-Datei ist ein Landeort, der zu einer bestimmten Höhe vorhergesagt wurde - bekanntes Prinzip.
+
+Sieht man sich die GPX-Datei an (mit EasyGPS, Garmin BaseCamp, Google Earth, http://www.bernhard-gaul.de/gpxviewer/gpxviewer.php, ...), erkennt man, dass eine gute Genauigkeit erst nach dem Platzen gegeben ist. Die tatsächliche Burst-Höhe ist für die Vorhersage maßgeblich, nicht nur die Windgeschwindigkeiten. Evtl. lasse ich die Live-Predictions des Aufstiegs in einer späteren Version weg.
+
+-------------------------------------------------
+9.2.2015
+http://20832.dynamicboard.de/t3511f14-Live-Prediction.html#msg3073872
+
+Version 1.2
+a) SondePredictor kann schon gestartet werden, bevor der groundtrack da ist; wartet dann solange
+b) GPX-Datei wird nach jedem Anhängen einer weiteren Landeposition mit </gpx> abgeschlossen
+
+-------------------------------------------------
+12.2.2015
+http://20832.dynamicboard.de/t3511f14-Live-Prediction.html#msg3073872
+
+Noch ein Nachtrag zum Demo-Verzeichnis, leider hatte ich die tatsächliche Landeposition nicht beigefügt.
+
+Vorhersage (predict.org):	53.1992 9.24739
+Landung (SondeMonitor):	53.09967 9.43081
+Landung (Garmin):	53.09657 9.43080
+
+Entfernung zwischen Vorhersage (predict.org) und Landeort (Garmin): 16.7 km
+Entfernung zwischen Vorhersage (SondePredictor bei 27946m Höhe) und Landeort (Garmin): 4.9 km
+Entfernung zwischen Vorhersage (SondePredictor bei 10302m Höhe) und Landeort (Garmin): 4.0 km
+Entfernung zwischen Vorhersage (SondePredictor bei 5087m Höhe) und Landeort (Garmin): 2.4 km
+Entfernung zwischen Vorhersage (SondePredictor bei 1214m Höhe) und Landeort (Garmin): 750m
+
+-------------------------------------------------
+18.2.2015
+http://20832.dynamicboard.de/t3511f14-Live-Prediction.html#msg3073872
+
+Nun ist die Version 1.3 fertig. Sie enthält die jüngsten Erfahrungen und Anregungen:
+
+a) Ausgabe der berechneten Landepositionen auf beliebige COM-Schnittstelle im NMEA-Format, kompatibel zu TOP 200
+b) Korrektur: Zuordnung GroundTrack/StartPrediction
+c) Optimierung von Filtern
+d) LivePrediction erst ab 2 Minuten nach Burst
+
+Die Verbesserungen sind gut zu sehen, wenn man die GPX-Dateien (...V1_2, ...V1_3) im Demo-Verzeichnis vergleicht.
+
+Der COM-Port für NMEA wird als erster Startparameter angegeben, z.B. COM5
+Wird er nicht angegeben, wird COM8 verwendet.
+Wird er als "" angegeben, erfolgt keine Ausgabe.
+
+-------------------------------------------------
+4.3.2015
+http://20832.dynamicboard.de/t3511f14-Live-Prediction.html#msg3073872
+
+Die Version 1.4 steht bereit!
+[URL]https://www.dropbox.com/sh/bo8pe5s6s7qj08l/AACI19_RYKwSLgBb88WCzABoa?dl=0[/URL]
+
+Neuerung #1:
+Das Einrechnen hoher Sinkraten wird nicht mehr ein- oder ausgeschaltet, sondern geschieht je nach Bedarf fließend.
+Dadurch werden unnötige Sprünge in den Vorhersagen vermieden.
+
+Neuerung #2:
+Der GroundTrack von DFM-06 wurde bisher nicht ausgewertet; in diesen Fällen gab es keine Live-Prediction. Jetzt wird auch dieses Dateiformat erkannt, wie schon das für RS92-SGP.
+Evtl. erzeugt SM für andere Sondentypen noch weitere Dateiformate. Falls dies der Fall sein sollte, bitte ich um Beispiele (groundtrack.txt und output.csv/flight_path.csv).
+
+Beispiel RS92-SGP:
+ 1254    53.52188      8.16223  19503.545      0.07843 11:47:24
+=> 5 Spalten, durch Blancs getrennt
+=> Zeit in Sekunden ab Dateistart
+
+Beispiel DFM-06:
+2015-02-28 23:38:55.000, 50.689393    5.892262 20946   5.4 069.9  3.8
+=> 2 Spalten mit Blanc, dann Komma, dann 6 Spalten mit Blanc
+=> Zeit als Datum/Uhrzeit
+
+Weitere Neuerungen:
+#3 Der Name der CUSF-Datei kann nun einen beliebigen Prefix haben, d.h. er muss nicht exakt flight_path.csv oder output.csv lauten
+#4 Korrektur: Falsche Fehlermeldungen auf Konsole, wenn NMEA-Ausgabe nicht aktiviert
+#5 Wenn die CUSF-Datei fehlt, wird sofort eine Fehlermeldung ausgegeben (nicht erst, wenn GroundTrack-Datei vorhanden).
+#6 Keine unnötige Dateiausgabe, wenn keine Vorhersage möglich
+#7 Verbesserte Genauigkeit kurz nach Burst
+
+-------------------------------------------------
+15.3.2015
+http://20832.dynamicboard.de/t3511f14-Live-Prediction-1.html#msg3074028
+
+Die Version 1.5 steht bereit!
+[URL]https://www.dropbox.com/sh/bo8pe5s6s7qj08l/AACI19_RYKwSLgBb88WCzABoa?dl=0[/URL]
+
+Das Wesentliche ist die Kompatibilität zur M10. Dank an Andreas6_B für die M10-Groundtrack-Datei digitalsonde2014120818Z_M10.log
+
+Ferner kommen die Vorhersagen nun in einem längeren Takt, und zusätzlich werden schlechte Werte stärker herausgefiltert, d.h. verworfen. Dadurch sind einige Vorhersagen etwas, aber auch nur etwas, genauer geworden.
+
+Neuerungen:
+a) GroundTrack-Datei für M10 lesen
+b) Ausgabe, welcher Sondentyp erkannt wurde
+c) Verbesserte Genauigkeit: Synchronisation von SM-GrondTrack und CUSF-Datei
+d) Verbesserte Genauigkeit: Verrechnen der Sinkgeschwindigkeit
+e) Korrektur: Start der Vorhersage (war u.U. zu früh)
+f) Live-Prediction ab 90s nach Burst (statt 120)
+g) Live-Prediction alle 90s (statt 60) zwecks höherer Genauigkeit
+
+-------------------------------------------------
+3.4.2015
+http://20832.dynamicboard.de/t3511f14-Live-Prediction-1.html#msg3074093
+
+Version 1.6 steht bereit!
+[URL]https://www.dropbox.com/sh/bo8pe5s6s7qj08l/AACI19_RYKwSLgBb88WCzABoa?dl=0[/URL]
+
+Die wichtigste Änderung ist die Berücksichtigung geringer Sinkraten.
+Dies stellt deutlich höhere Anforderungen an die Qualität der von SondeMonitor gelieferten Daten, weshalb nun vermehrt ausgesiebt wird.
+
+Neuerungen:
+a) Detailliertere Konsolenausgaben
+b) Wiederaufsetzen nach Problemen beim Lesen der Groundtrack-Datei (weshalb auch immer)
+c) Kompensation von zu geringer Sinkrate
+d) Korrektur NMEA-Ausgabe: Bezeichnung N/S und E/W waren vertauscht (Latidude und Longitude)
+e) Aufwändigere Beurteilung, welche Positionen verwendet werden können
+f) Verbesserte Berechnung der Sinkrate
+g) M10: Von der Sonde gelieferte Vertikalgeschwindigkeit verwenden
+
+-------------------------------------------------
+28.4.2015
+
+Version 1.7 steht bereit!
+https://www.dropbox.com/sh/bo8pe5s6s7qj0...b88WCzABoa?dl=0
+SondePredictor.7z
+
+Neuerungen:
+a) Verbesserter Filter zwecks höherer Genauigkeit
+b) Zusätzlich KML-Datei, welche nur die letzte Vorhersage enthält
+
+Die Ausgabe in KML-Datei entstand auf Anregung von Harry.
+Zweck ist das Einlesen in Google Earth. In Verbindung mit der Einstellung "Netzwerk-Link" sollte GE die Darstellung der KML-Datei immer wieder aktualisieren, was mir bisher aber nicht richtig gelungen ist.
+
+-------------------------------------------------
+29.4.2015
+
+Diesmal hochfrequent: Version 1.8
+Wegen Merkwürdigkeiten mit Dropbox nun auf OneDrive:
+https://onedrive.live.com/redir?resid=BA...thint=folder%2c
+
+Änderungen:
+a) KML-Datei mit festem Namen: LivePrediction_Current.kml
+b) Ausgabe der Versionsnummer in GPX und KML
+
+Vielleicht findet jemand heraus, wie Google Earth für selbsttätiges Aktualisieren eingestellt werden muss. Das ist auch mir nur ansatzweise gelungen, obwohl diese Funktionalität augenscheinlich in GE eingebaut ist.
+SondePredictor habe ich dahingehend getestet; die jeweils neueste Vorhersage wird in die KML-Datei eingetragen.
+
+-------------------------------------------------
+10.6.2015
+
+Version 1.9
+
+Der SondePredictor schreibt nun sekündlich, jedenfalls sofern die Daten von SM in dem Tempo eintreffen und plausibel sind!
+
+Weil OneDrive plötzlich für den Download eine Anmeldung verlangt, liegt die 7z-Datei mit EXE und den DLLs nun auf eigenem Webspace. Was man nicht selbst macht taugt halt nichts ;-)
+http://asphaltohneende.de/_VerlinkteDate...ndePredictor.7z
+
+Die erste Vorhersage kommt bei guten Daten ca. 2200m plus 10s nach dem Burst, ist aber u.U. noch ungenau. Mit den nächsten beiden verhält es sich ähnlich. Der Predictor filtert da noch nicht so streng, damit man möglichst kurz nach dem Burst erste Schätzungen erhält.
+Ab der vierten Vorhersage sind die Filter eingeschwungen, nach ca. ein bis zwei Minuten. Dann kann es sekündlich weiter gehen.
